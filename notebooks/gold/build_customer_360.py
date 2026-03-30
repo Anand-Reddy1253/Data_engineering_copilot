@@ -12,6 +12,7 @@ import sys
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import DecimalType
+from pyspark.sql.window import Window
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../_shared"))
 from delta_utils import upsert_to_delta
@@ -68,11 +69,6 @@ def build_customer_360(spark: SparkSession) -> DataFrame:
         .groupBy("customer_id", "payment_method")
         .count()
     )
-    window_spec = (
-        F.window if False else  # type: ignore[attr-defined]
-        None
-    )
-    from pyspark.sql.window import Window
     rank_window = Window.partitionBy("customer_id").orderBy(F.col("count").desc())
     preferred_payment = (
         payment_counts
