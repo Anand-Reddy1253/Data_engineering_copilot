@@ -1,0 +1,79 @@
+# METADATA
+# owner: data-engineering-team
+# layer: gold
+# source: {{SOURCE_PATH}}
+# target: {{TARGET_PATH}}
+# description: {{DESCRIPTION}}
+# created: 2024-01-01
+
+import os
+import sys
+from typing import Optional
+
+import pyspark.sql.functions as F
+from pyspark.sql import DataFrame, SparkSession
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../_shared"))
+from delta_utils import upsert_to_delta
+from logging_config import get_logger
+from schema_registry import get_schema
+from spark_session import get_spark
+
+logger = get_logger(__name__)
+
+SOURCE_PATH: str = os.environ.get("SOURCE_PATH", "{{SOURCE_PATH}}")
+TARGET_PATH: str = os.environ.get("TARGET_PATH", "{{TARGET_PATH}}")
+ENTITY: str = "{{ENTITY}}"
+MERGE_KEY: list[str] = ["{{MERGE_KEY}}"]
+
+
+def build_{{ENTITY}}(spark: SparkSession) -> DataFrame:
+    """Build Gold {{ENTITY}} table.
+
+    Reads from Silver layer, joins dimensions, aggregates metrics,
+    and merges to Gold Delta table.
+
+    Args:
+        spark: Active SparkSession.
+
+    Returns:
+        Aggregated DataFrame written to Delta.
+    """
+    logger.info("Starting Gold build for %s", ENTITY)
+
+    silver_df = spark.read.format("delta").load(SOURCE_PATH)
+    source_count = silver_df.count()
+    logger.info("Read %d rows from Silver", source_count)
+
+    # Build aggregations here
+    gold_df = (
+        silver_df
+        .groupBy("{{MERGE_KEY}}")
+        .agg(
+            F.count("*").alias("record_count"),
+            F.max(F.col("_processed_at")).alias("last_updated"),
+        )
+        .withColumn("_gold_processed_at", F.current_timestamp())
+    )
+
+    gold_df = gold_df.repartition(4)
+
+    upsert_to_delta(
+        df=gold_df,
+        path=TARGET_PATH,
+        merge_key=MERGE_KEY,
+    )
+
+    logger.info("Gold build complete for %s. Rows: %d", ENTITY, gold_df.count())
+    return gold_df
+
+
+def main() -> None:
+    """Entry point for Gold aggregation notebook."""
+    spark = get_spark()
+    build_{{ENTITY}}(spark)
+    spark.stop()
+
+
+if __name__ == "__main__":
+    main()

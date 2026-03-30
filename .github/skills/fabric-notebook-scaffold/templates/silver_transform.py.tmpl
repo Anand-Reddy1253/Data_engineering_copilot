@@ -1,0 +1,90 @@
+# METADATA
+# owner: data-engineering-team
+# layer: silver
+# source: {{SOURCE_PATH}}
+# target: {{TARGET_PATH}}
+# description: {{DESCRIPTION}}
+# created: 2024-01-01
+
+import os
+import sys
+from typing import Optional
+
+import pyspark.sql.functions as F
+from pyspark.sql import DataFrame, SparkSession
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../_shared"))
+from delta_utils import upsert_to_delta
+from logging_config import get_logger
+from schema_registry import get_schema
+from spark_session import get_spark
+
+logger = get_logger(__name__)
+
+SOURCE_PATH: str = os.environ.get("SOURCE_PATH", "{{SOURCE_PATH}}")
+TARGET_PATH: str = os.environ.get("TARGET_PATH", "{{TARGET_PATH}}")
+ENTITY: str = "{{ENTITY}}"
+MERGE_KEY: list[str] = ["{{MERGE_KEY}}"]
+
+
+def transform_{{ENTITY}}(spark: SparkSession, source_path: str, target_path: str) -> DataFrame:
+    """Transform {{ENTITY}} from Bronze to Silver.
+
+    Steps:
+        1. Read Bronze Delta table
+        2. Deduplicate on business key
+        3. Cast types per schema registry
+        4. Handle nulls
+        5. Hash PII columns
+        6. Merge to Silver Delta
+
+    Args:
+        spark: Active SparkSession.
+        source_path: Bronze Delta table path.
+        target_path: Silver Delta table path.
+
+    Returns:
+        Cleaned DataFrame written to Delta.
+    """
+    logger.info("Starting Silver transform for %s", ENTITY)
+
+    schema = get_schema("silver_{{ENTITY}}")
+
+    bronze_df = spark.read.format("delta").load(source_path)
+    raw_count = bronze_df.count()
+    logger.info("Read %d rows from Bronze", raw_count)
+
+    # Deduplicate on business key
+    deduped_df = bronze_df.dropDuplicates(MERGE_KEY)
+    dedup_count = deduped_df.count()
+    logger.info("After dedup: %d rows (removed %d)", dedup_count, raw_count - dedup_count)
+
+    # Cast types and apply schema
+    cleaned_df = (
+        deduped_df
+        .filter(F.col("{{MERGE_KEY}}").isNotNull())
+        # Add type casts here following schema_registry types
+        .withColumn("_processed_at", F.current_timestamp())
+    )
+
+    cleaned_df = cleaned_df.repartition(4)
+
+    upsert_to_delta(
+        df=cleaned_df,
+        path=target_path,
+        merge_key=MERGE_KEY,
+    )
+
+    logger.info("Silver transform complete for %s. Final rows: %d", ENTITY, cleaned_df.count())
+    return cleaned_df
+
+
+def main() -> None:
+    """Entry point for Silver transform notebook."""
+    spark = get_spark()
+    transform_{{ENTITY}}(spark, SOURCE_PATH, TARGET_PATH)
+    spark.stop()
+
+
+if __name__ == "__main__":
+    main()
