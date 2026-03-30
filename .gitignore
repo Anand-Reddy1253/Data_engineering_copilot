@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Spark & Delta Lake
+spark-warehouse/
+derby.log
+metastore_db/
+*.parquet
+
+# Lakehouse raw data (generated — not committed)
+lakehouse/bronze/raw/
+lakehouse/bronze/pos_transactions/
+lakehouse/bronze/inventory_movements/
+lakehouse/bronze/customers/
+lakehouse/bronze/clickstream/
+lakehouse/silver/
+lakehouse/gold/
+
+# DuckDB database files
+*.duckdb
+*.duckdb.wal
+
+# Testing & coverage
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+test-results/
+
+# Linting
+.mypy_cache/
+.ruff_cache/
+
+# Agent logs
+.agent-logs/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Secrets baseline
+.secrets.baseline

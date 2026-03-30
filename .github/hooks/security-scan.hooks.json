@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": {
+      "command": "bash",
+      "args": ["scripts/hooks/block-secrets.sh"],
+      "description": "Block tool use if secrets detected in tool input"
+    },
+    "postToolUse": {
+      "command": "bash",
+      "args": ["scripts/hooks/scan-for-pii.sh"],
+      "description": "Scan edited files for raw PII after file edits"
+    },
+    "errorOccurred": {
+      "command": "bash",
+      "args": ["scripts/hooks/log-error.sh"],
+      "description": "Log error details for debugging"
+    }
+  }
+}

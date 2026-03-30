@@ -1,0 +1,16 @@
+name: source_postgres_contoso
+type: postgres
+description: PostgreSQL source database for Contoso ERP system
+host: ${POSTGRES_HOST}
+port: ${POSTGRES_PORT}
+database: ${POSTGRES_DB}
+auth_method: keyvault_ref
+keyvault_secret_name: contoso-postgres-credentials
+ssl_mode: require
+connection_timeout: 30
+schema: public
+tables:
+  - pos_transactions
+  - customers
+  - products
+  - stores

@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "github": {
+      "type": "url",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "description": "GitHub MCP server for issues, PRs, workflows, and repository operations"
+    },
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@anthropic/mcp-filesystem",
+        "/home/runner/work/Data_engineering_copilot/Data_engineering_copilot"
+      ],
+      "description": "Filesystem MCP server for reading and writing local files"
+    },
+    "duckdb-warehouse": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "-m",
+        "mcp_duckdb",
+        "--database",
+        "warehouse/contoso.duckdb"
+      ],
+      "description": "DuckDB MCP server for querying the Contoso data warehouse"
+    }
+  }
+}

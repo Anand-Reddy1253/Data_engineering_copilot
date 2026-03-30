@@ -1,0 +1,57 @@
+name: Data Quality Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "notebooks/**"
+      - "data_quality/**"
+      - "lakehouse/**"
+
+jobs:
+  data-quality:
+    name: Data Quality Checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Seed data
+        run: python scripts/seed_data.py --small
+
+      - name: Run Bronze notebooks
+        run: make run-bronze
+        env:
+          PYSPARK_PYTHON: python3
+
+      - name: Run Silver notebooks
+        run: make run-silver
+        env:
+          PYSPARK_PYTHON: python3
+
+      - name: Run DQ checks
+        run: make dq
+
+      - name: Upload DQ results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dq-results
+          path: data_quality/results/

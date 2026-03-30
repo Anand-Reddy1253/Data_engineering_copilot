@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "contoso-fabric-platform"
+version = "0.1.0"
+description = "Contoso Fabric Data Engineering Platform — medallion architecture with PySpark and Delta Lake"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Data Engineering Team", email = "data-team@contoso.com"},
+]
+keywords = ["pyspark", "delta-lake", "data-engineering", "medallion-architecture"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["notebooks", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "ANN", # flake8-annotations (type hints)
+    "S",   # flake8-bandit (security)
+    "T20", # flake8-print (no bare print)
+]
+ignore = [
+    "ANN101",  # missing type annotation for self
+    "ANN102",  # missing type annotation for cls
+    "S101",    # use of assert (needed in tests)
+    "T201",    # print found (needed in scripts)
+    "ANN401",  # dynamically typed expressions
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ANN", "S", "T20"]
+"scripts/**/*.py" = ["T20"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+no_strict_optional = true
+warn_return_any = false
+warn_unused_configs = true
+exclude = [
+    "^\\.venv/",
+    "^build/",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m not integration')",
+    "slow: marks tests as slow (deselect with '-m not slow')",
+    "spark: marks tests that require a SparkSession",
+]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]
