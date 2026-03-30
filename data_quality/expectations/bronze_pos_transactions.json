@@ -1,0 +1,43 @@
+{
+  "expectation_suite_name": "bronze_pos_transactions",
+  "data_asset_type": "Dataset",
+  "meta": {
+    "great_expectations_version": "0.18.0",
+    "notes": "Bronze layer expectations for POS transactions — minimal checks since raw data"
+  },
+  "expectations": [
+    {
+      "expectation_type": "expect_table_row_count_to_be_between",
+      "kwargs": {
+        "min_value": 1,
+        "max_value": 10000000
+      },
+      "meta": {"rule_type": "row_count"}
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": {"column": "transaction_id"},
+      "meta": {"rule_type": "schema"}
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": {"column": "_ingested_at"},
+      "meta": {"rule_type": "schema"}
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": {"column": "_source_file"},
+      "meta": {"rule_type": "schema"}
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {"column": "transaction_id", "mostly": 0.99},
+      "meta": {"rule_type": "completeness"}
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {"column": "_ingested_at"},
+      "meta": {"rule_type": "completeness"}
+    }
+  ]
+}

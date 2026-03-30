@@ -1,0 +1,13 @@
+name: source_sftp_inventory
+type: sftp
+description: SFTP server for warehouse inventory movement files
+host: ${SFTP_INVENTORY_HOST}
+port: 22
+path: /data/inventory/
+auth_method: keyvault_ref
+keyvault_secret_name: contoso-sftp-inventory-key
+file_pattern: "inventory_*.csv"
+file_format: csv
+encoding: utf-8
+timeout_seconds: 60
+known_hosts_env: SFTP_KNOWN_HOSTS

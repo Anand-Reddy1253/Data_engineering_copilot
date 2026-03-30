@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  spark-master:
+    image: bitnami/spark:3.5
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    volumes:
+      - ./lakehouse:/opt/bitnami/spark/lakehouse
+      - ./notebooks:/opt/bitnami/spark/notebooks
+
+  spark-worker:
+    image: bitnami/spark:3.5
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+    depends_on:
+      - spark-master
+    volumes:
+      - ./lakehouse:/opt/bitnami/spark/lakehouse
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  duckdb:
+    image: python:3.11-slim
+    command: >
+      bash -c "pip install duckdb --quiet &&
+               python -c \"import duckdb; conn = duckdb.connect('warehouse/contoso.duckdb'); print('DuckDB ready'); conn.close()\""
+    volumes:
+      - ./warehouse:/app/warehouse
+    working_dir: /app
+
+volumes:
+  minio-data:

@@ -1,0 +1,218 @@
+name: daily_full_refresh
+description: Full refresh pipeline running all Bronze → Silver → Gold notebooks daily
+schedule: "0 6 * * *"
+owner: data-engineering-team
+notifications:
+  on_failure:
+    - type: email
+      recipients:
+        - data-team@contoso.com
+  on_success: []
+
+steps:
+  # -------------------------------------------------------------------------
+  # BRONZE LAYER — parallel ingestion
+  # -------------------------------------------------------------------------
+  - name: bronze_ingest_pos_transactions
+    type: notebook
+    notebook: notebooks/bronze/ingest_pos_transactions.py
+    source: lakehouse/bronze/raw/pos_transactions/
+    target: lakehouse/bronze/pos_transactions/
+    depends_on: []
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+      retry_on:
+        - SparkException
+        - DeltaOptimisticConcurrencyException
+    timeout_minutes: 30
+
+  - name: bronze_ingest_inventory
+    type: notebook
+    notebook: notebooks/bronze/ingest_inventory.py
+    source: lakehouse/bronze/raw/inventory_movements/
+    target: lakehouse/bronze/inventory_movements/
+    depends_on: []
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+      retry_on:
+        - SparkException
+    timeout_minutes: 30
+
+  - name: bronze_ingest_customers
+    type: notebook
+    notebook: notebooks/bronze/ingest_customers.py
+    source: lakehouse/bronze/raw/customers/
+    target: lakehouse/bronze/customers/
+    depends_on: []
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+    timeout_minutes: 30
+
+  - name: bronze_ingest_clickstream
+    type: notebook
+    notebook: notebooks/bronze/ingest_clickstream.py
+    source: lakehouse/bronze/raw/clickstream/
+    target: lakehouse/bronze/clickstream/
+    depends_on: []
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+    timeout_minutes: 30
+
+  # -------------------------------------------------------------------------
+  # BRONZE DQ CHECKPOINT
+  # -------------------------------------------------------------------------
+  - name: dq_bronze_checkpoint
+    type: dq_checkpoint
+    checkpoint: data_quality/checkpoints/default_checkpoint.yaml
+    suites:
+      - bronze_pos_transactions
+    depends_on:
+      - bronze_ingest_pos_transactions
+      - bronze_ingest_inventory
+      - bronze_ingest_customers
+      - bronze_ingest_clickstream
+    retry_policy:
+      max_attempts: 1
+      backoff_seconds: 0
+    timeout_minutes: 15
+
+  # -------------------------------------------------------------------------
+  # SILVER LAYER — depends on respective Bronze steps
+  # -------------------------------------------------------------------------
+  - name: silver_clean_transactions
+    type: notebook
+    notebook: notebooks/silver/clean_transactions.py
+    source: lakehouse/bronze/pos_transactions/
+    target: lakehouse/silver/pos_transactions/
+    depends_on:
+      - dq_bronze_checkpoint
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+    timeout_minutes: 30
+
+  - name: silver_clean_inventory
+    type: notebook
+    notebook: notebooks/silver/clean_inventory.py
+    source: lakehouse/bronze/inventory_movements/
+    target: lakehouse/silver/inventory_movements/
+    depends_on:
+      - dq_bronze_checkpoint
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+    timeout_minutes: 30
+
+  - name: silver_clean_customers
+    type: notebook
+    notebook: notebooks/silver/clean_customers.py
+    source: lakehouse/bronze/customers/
+    target: lakehouse/silver/customers/
+    depends_on:
+      - dq_bronze_checkpoint
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+    timeout_minutes: 30
+
+  - name: silver_sessionise_clicks
+    type: notebook
+    notebook: notebooks/silver/sessionise_clicks.py
+    source: lakehouse/bronze/clickstream/
+    target: lakehouse/silver/clickstream/
+    depends_on:
+      - dq_bronze_checkpoint
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+    timeout_minutes: 30
+
+  # -------------------------------------------------------------------------
+  # SILVER DQ CHECKPOINT
+  # -------------------------------------------------------------------------
+  - name: dq_silver_checkpoint
+    type: dq_checkpoint
+    checkpoint: data_quality/checkpoints/default_checkpoint.yaml
+    suites:
+      - silver_clean_transactions
+    depends_on:
+      - silver_clean_transactions
+      - silver_clean_inventory
+      - silver_clean_customers
+      - silver_sessionise_clicks
+    retry_policy:
+      max_attempts: 1
+      backoff_seconds: 0
+    timeout_minutes: 15
+
+  # -------------------------------------------------------------------------
+  # GOLD LAYER — depends on all Silver steps
+  # -------------------------------------------------------------------------
+  - name: gold_build_dim_customer
+    type: notebook
+    notebook: notebooks/gold/build_dim_customer.py
+    source: lakehouse/silver/customers/
+    target: lakehouse/gold/dim_customer/
+    depends_on:
+      - dq_silver_checkpoint
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+    timeout_minutes: 30
+
+  - name: gold_build_dim_product
+    type: notebook
+    notebook: notebooks/gold/build_dim_product.py
+    source: lakehouse/silver/pos_transactions/
+    target: lakehouse/gold/dim_product/
+    depends_on:
+      - dq_silver_checkpoint
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+    timeout_minutes: 30
+
+  - name: gold_build_fact_sales
+    type: notebook
+    notebook: notebooks/gold/build_fact_sales.py
+    source: lakehouse/silver/pos_transactions/
+    target: lakehouse/gold/fact_sales/
+    depends_on:
+      - gold_build_dim_customer
+      - gold_build_dim_product
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+    timeout_minutes: 30
+
+  - name: gold_build_customer_360
+    type: notebook
+    notebook: notebooks/gold/build_customer_360.py
+    source: lakehouse/silver/pos_transactions/
+    target: lakehouse/gold/agg_customer_360/
+    depends_on:
+      - dq_silver_checkpoint
+    retry_policy:
+      max_attempts: 3
+      backoff_seconds: 60
+    timeout_minutes: 30
+
+  # -------------------------------------------------------------------------
+  # GOLD DQ CHECKPOINT
+  # -------------------------------------------------------------------------
+  - name: dq_gold_checkpoint
+    type: dq_checkpoint
+    checkpoint: data_quality/checkpoints/default_checkpoint.yaml
+    suites:
+      - gold_fact_sales
+    depends_on:
+      - gold_build_fact_sales
+      - gold_build_customer_360
+    retry_policy:
+      max_attempts: 1
+      backoff_seconds: 0
+    timeout_minutes: 15

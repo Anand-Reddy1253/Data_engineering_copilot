@@ -1,0 +1,53 @@
+{
+  "expectation_suite_name": "gold_fact_sales",
+  "data_asset_type": "Dataset",
+  "meta": {
+    "great_expectations_version": "0.18.0",
+    "notes": "Gold layer expectations for fact_sales — strict checks"
+  },
+  "expectations": [
+    {
+      "expectation_type": "expect_table_row_count_to_be_between",
+      "kwargs": {
+        "min_value": 1,
+        "max_value": 50000000
+      },
+      "meta": {"rule_type": "row_count"}
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {"column": "transaction_id"},
+      "meta": {"rule_type": "completeness"}
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_unique",
+      "kwargs": {"column": "transaction_id"},
+      "meta": {"rule_type": "uniqueness"}
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {"column": "quantity"},
+      "meta": {"rule_type": "completeness"}
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {"column": "total_amount"},
+      "meta": {"rule_type": "completeness"}
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {"column": "quantity", "min_value": 1, "max_value": 10000},
+      "meta": {"rule_type": "range"}
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {"column": "total_amount", "min_value": 0.01, "max_value": 10000000},
+      "meta": {"rule_type": "range"}
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {"column": "_processed_at"},
+      "meta": {"rule_type": "completeness"}
+    }
+  ]
+}
