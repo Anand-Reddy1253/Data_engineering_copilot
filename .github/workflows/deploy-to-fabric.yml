@@ -1,0 +1,52 @@
+name: Deploy to Fabric
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "notebooks/**"
+      - "pipelines/**"
+
+jobs:
+  deploy:
+    name: Deploy to Microsoft Fabric
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deployment dependencies
+        run: pip install pyyaml requests
+
+      - name: Validate pipeline YAML files
+        run: |
+          python -c "
+          import yaml, json, jsonschema, os
+          with open('pipelines/schemas/pipeline_schema.json') as f:
+              schema = json.load(f)
+          for fname in os.listdir('pipelines'):
+              if fname.endswith('.yaml'):
+                  with open(f'pipelines/{fname}') as f:
+                      pipeline = yaml.safe_load(f)
+                  jsonschema.validate(pipeline, schema)
+                  print(f'Valid: {fname}')
+          "
+
+      - name: Deploy notebooks to Fabric workspace
+        run: |
+          echo "Deploying notebooks to Fabric workspace: $FABRIC_WORKSPACE_ID"
+          # Deployment logic would use Fabric REST API
+          # python scripts/deploy_to_fabric.py --workspace-id $FABRIC_WORKSPACE_ID
+          echo "Deployment complete (dry run)"
+        env:
+          FABRIC_WORKSPACE_ID: ${{ secrets.FABRIC_WORKSPACE_ID }}
+          FABRIC_CLIENT_ID: ${{ secrets.FABRIC_CLIENT_ID }}
+          FABRIC_CLIENT_SECRET: ${{ secrets.FABRIC_CLIENT_SECRET }}
+          FABRIC_TENANT_ID: ${{ secrets.FABRIC_TENANT_ID }}

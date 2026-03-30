@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": {
+      "command": "bash",
+      "args": ["-c", "echo \"{\\\"event\\\": \\\"sessionStart\\\", \\\"timestamp\\\": \\\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\\"}\" >> .agent-logs/session.log 2>/dev/null || true"]
+    },
+    "postToolUse": {
+      "command": "bash",
+      "args": ["-c", "if command -v ruff >/dev/null 2>&1; then ruff check --fix . --quiet 2>/dev/null || true; fi"]
+    },
+    "agentStop": {
+      "command": "bash",
+      "args": ["-c", "make lint && make test || (echo 'Quality gate failed: lint or tests failed' && exit 1)"]
+    },
+    "sessionEnd": {
+      "command": "bash",
+      "args": ["-c", "echo \"{\\\"event\\\": \\\"sessionEnd\\\", \\\"timestamp\\\": \\\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\\"}\" >> .agent-logs/session.log 2>/dev/null || true"]
+    }
+  }
+}
