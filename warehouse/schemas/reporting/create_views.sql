@@ -69,8 +69,8 @@ WITH
             dc.signup_date
         FROM
             dw.dim_customer AS dc
-            INNER JOIN staging.customers AS c360
-                ON dc.customer_bk = c360.customer_id
+            INNER JOIN dw.agg_customer_360 AS c360
+                ON dc.customer_bk = c360.customer_bk
         WHERE
             dc._is_current
     )

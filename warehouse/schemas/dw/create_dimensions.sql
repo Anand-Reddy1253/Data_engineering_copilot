@@ -113,3 +113,20 @@ CREATE TABLE IF NOT EXISTS dw.fact_inventory_snapshot (
     _processed_at   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_fact_inventory_snapshot PRIMARY KEY (snapshot_id)
 );
+
+-- ============================================================
+-- dw.agg_customer_360
+-- Customer 360 aggregate loaded from Gold layer
+-- ============================================================
+CREATE TABLE IF NOT EXISTS dw.agg_customer_360 (
+    customer_bk                 VARCHAR         NOT NULL,
+    total_orders                BIGINT          NOT NULL DEFAULT 0,
+    total_spend                 DECIMAL(16, 2)  NOT NULL DEFAULT 0,
+    avg_order_value             DECIMAL(12, 2),
+    first_purchase_date         TIMESTAMP,
+    last_purchase_date          TIMESTAMP,
+    preferred_payment_method    VARCHAR(20),
+    lifetime_value_tier         VARCHAR(10),
+    _processed_at               TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_agg_customer_360 PRIMARY KEY (customer_bk)
+);
